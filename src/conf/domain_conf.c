@@ -1509,6 +1509,13 @@ VIR_ENUM_IMPL(virDomainLaunchSecurity,
               "s390-pv",
 );
 
+VIR_ENUM_IMPL(virDomainSevModel,
+              VIR_DOMAIN_SEV_MODEL_LAST,
+              "",
+              "sev",
+              "sev-es",
+);
+
 typedef enum {
     VIR_DOMAIN_NET_VHOSTUSER_MODE_NONE,
     VIR_DOMAIN_NET_VHOSTUSER_MODE_CLIENT,

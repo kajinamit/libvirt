@@ -1881,6 +1881,7 @@ virQEMUCapsSEVInfoCopy(virSEVCapability **dst,
     tmp->reduced_phys_bits = src->reduced_phys_bits;
     tmp->max_guests = src->max_guests;
     tmp->max_es_guests = src->max_es_guests;
+    tmp->model = src->model;
 
     *dst = g_steal_pointer(&tmp);
 }
@@ -3402,6 +3403,62 @@ virQEMUCapsGetSEVMaxGuests(virSEVCapability *caps)
     }
 }
 
+
+/*
+ * Check whether AMD Secure Encrypted Virtualization (x86) is enabled
+ */
+static bool
+virQEMUCapsKVMSupportsSecureGuestSEV(void)
+{
+    g_autofree char *modValue = NULL;
+
+    if (virFileReadValueString(&modValue, "/sys/module/kvm_amd/parameters/sev") < 0)
+        return false;
+
+    if (modValue[0] != '1' && modValue[0] != 'Y' && modValue[0] != 'y')
+        return false;
+
+    if (virFileExists(QEMU_DEV_SEV))
+        return true;
+
+    return false;
+}
+
+
+/*
+ * Check whether AMD Secure Encrypted Virtualization-Encrypted State (x86) is enabled
+ */
+static bool
+virQEMUCapsKVMSupportsSecureGuestSEVES(void)
+{
+    g_autofree char *modValue = NULL;
+
+    if (virFileReadValueString(&modValue, "/sys/module/kvm_amd/parameters/sev_es") < 0)
+        return false;
+
+    if (modValue[0] != '1' && modValue[0] != 'Y' && modValue[0] != 'y')
+        return false;
+
+    if (virFileExists(QEMU_DEV_SEV))
+        return true;
+
+    return false;
+}
+
+
+static void
+virQEMUCapsGetSEVModel(virSEVCapability *caps)
+{
+    caps->model.report = true;
+
+    if (virQEMUCapsKVMSupportsSecureGuestSEV())
+        VIR_DOMAIN_CAPS_ENUM_SET(caps->model, VIR_DOMAIN_SEV_MODEL_SEV);
+
+    if (virQEMUCapsKVMSupportsSecureGuestSEVES())
+        VIR_DOMAIN_CAPS_ENUM_SET(caps->model, VIR_DOMAIN_SEV_MODEL_SEV_ES);
+}
+
+
 static int
 virQEMUCapsProbeQMPSEVCapabilities(virQEMUCaps *qemuCaps,
                                    qemuMonitor *mon)
@@ -3422,6 +3479,8 @@ virQEMUCapsProbeQMPSEVCapabilities(virQEMUCaps *qemuCaps,
     }
 
     virQEMUCapsGetSEVMaxGuests(caps);
+
+    virQEMUCapsGetSEVModel(caps);
 
     virSEVCapabilitiesFree(qemuCaps->sevCapabilities);
     qemuCaps->sevCapabilities = caps;
@@ -4218,6 +4277,8 @@ virQEMUCapsParseSEVInfo(virQEMUCaps *qemuCaps, xmlXPathContextPtr ctxt)
      * lack of caching is a non-issue
      */
     virQEMUCapsGetSEVMaxGuests(sev);
+
+    virQEMUCapsGetSEVModel(sev);
 
     qemuCaps->sevCapabilities = g_steal_pointer(&sev);
     return 0;
@@ -5039,27 +5100,6 @@ virQEMUCapsKVMSupportsSecureGuestS390(void)
 
 
 /*
- * Check whether AMD Secure Encrypted Virtualization (x86) is enabled
- */
-static bool
-virQEMUCapsKVMSupportsSecureGuestAMD(void)
-{
-    g_autofree char *modValue = NULL;
-
-    if (virFileReadValueString(&modValue, "/sys/module/kvm_amd/parameters/sev") < 0)
-        return false;
-
-    if (modValue[0] != '1' && modValue[0] != 'Y' && modValue[0] != 'y')
-        return false;
-
-    if (virFileExists(QEMU_DEV_SEV))
-        return true;
-
-    return false;
-}
-
-
-/*
  * Check whether the secure guest functionality is enabled.
  * See the specific architecture function for details on the verifications made.
  */
@@ -5072,7 +5112,7 @@ virQEMUCapsKVMSupportsSecureGuest(void)
         return virQEMUCapsKVMSupportsSecureGuestS390();
 
     if (ARCH_IS_X86(arch))
-        return virQEMUCapsKVMSupportsSecureGuestAMD();
+        return virQEMUCapsKVMSupportsSecureGuestSEV();
 
     return false;
 }

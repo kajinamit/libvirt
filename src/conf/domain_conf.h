@@ -2854,6 +2854,13 @@ typedef enum {
     VIR_DOMAIN_LAUNCH_SECURITY_LAST,
 } virDomainLaunchSecurity;
 
+typedef enum {
+    VIR_DOMAIN_SEV_MODEL_NONE,
+    VIR_DOMAIN_SEV_MODEL_SEV,
+    VIR_DOMAIN_SEV_MODEL_SEV_ES,
+
+    VIR_DOMAIN_SEV_MODEL_LAST,
+} virDomainSevModel;
 
 struct _virDomainSEVDef {
     char *dh_cert;
@@ -4237,6 +4244,7 @@ VIR_ENUM_DECL(virDomainCryptoType);
 VIR_ENUM_DECL(virDomainCryptoBackend);
 VIR_ENUM_DECL(virDomainShmemModel);
 VIR_ENUM_DECL(virDomainShmemRole);
+VIR_ENUM_DECL(virDomainSevModel);
 VIR_ENUM_DECL(virDomainLaunchSecurity);
 /* from libvirt.h */
 VIR_ENUM_DECL(virDomainState);

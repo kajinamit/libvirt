@@ -654,6 +654,8 @@ virDomainCapsFeatureSEVFormat(virBuffer *buf,
     if (sev->cpu0_id != NULL)
         virBufferAsprintf(buf, "<cpu0Id>%s</cpu0Id>\n", sev->cpu0_id);
 
+    ENUM_PROCESS(sev, model, virDomainSevModelTypeToString);
+
     virBufferAdjustIndent(buf, -2);
     virBufferAddLit(buf, "</sev>\n");
 }
